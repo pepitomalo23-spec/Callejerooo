@@ -2,6 +2,15 @@
   box-sizing: border-box;
 }
 
+/* [hidden] debe ganar siempre, aunque otra regla más abajo fije "display"
+   en el mismo elemento (p.ej. .sidebar-status / .sidebar-quiz usan
+   display:flex para su propio layout interno). Sin esto, el navegador
+   prioriza la regla del autor sobre el estilo por defecto de [hidden] y el
+   bloque se queda visible aunque JS le ponga el atributo hidden. */
+[hidden] {
+  display: none !important;
+}
+
 html, body {
   margin: 0;
   padding: 0;
