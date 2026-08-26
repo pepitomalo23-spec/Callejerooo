@@ -224,6 +224,86 @@ html, body {
   color: #7fb2d9;
 }
 
+/* ============================
+   Comparador con Callejero Fiscal
+   ============================ */
+
+.compare-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compare-toggle {
+  width: 100%;
+}
+
+.compare-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compare-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b7c2cb;
+}
+
+.compare-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.compare-scan-status {
+  margin: 0;
+  font-size: 11px;
+  color: #7fb2d9;
+  min-height: 14px;
+}
+
+.compare-summary {
+  font-size: 13px;
+  line-height: 1.7;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.compare-details {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.compare-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #eef2f5;
+  padding: 4px 0;
+}
+
+.compare-list {
+  margin: 8px 0 4px;
+  padding: 0 0 0 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d5dce1;
+}
+
+.compare-list .compare-empty {
+  list-style: none;
+  margin-left: -18px;
+  color: #8b96a0;
+  font-style: italic;
+}
+
 /* En pantallas estrechas, el panel pasa a ocupar la parte inferior */
 @media (max-width: 640px) {
   #sidebar {

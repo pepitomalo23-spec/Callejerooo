@@ -9,7 +9,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-<link rel="stylesheet" href="css/style.css?v=5" />
+<link rel="stylesheet" href="css/style.css?v=6" />
 </head>
 <body>
 
@@ -42,10 +42,46 @@
       <button id="restart-btn" class="btn btn-secondary" type="button">Reordenar y reiniciar</button>
     </div>
 
+    <!-- Comparador: calles del mapa vs Callejero Fiscal 2026 -->
+    <div class="compare-section">
+      <button id="compare-toggle-btn" class="btn btn-secondary compare-toggle" type="button" aria-expanded="false">
+        Comparar con el Callejero Fiscal
+      </button>
+
+      <div id="compare-panel" class="compare-panel" hidden>
+        <p class="compare-hint">
+          Compara las calles ya detectadas en el mapa contra el listado oficial del
+          Callejero Fiscal 2026. Es una comparación aproximada (nombres, acentos y
+          orden de palabras pueden variar), revisa los resultados a mano.
+        </p>
+
+        <div class="compare-actions">
+          <button id="compare-run-btn" class="btn btn-primary" type="button">Comparar ahora</button>
+          <button id="compare-scan-btn" class="btn btn-secondary" type="button">Escanear más zonas de la ciudad</button>
+        </div>
+        <p id="compare-scan-status" class="compare-scan-status"></p>
+
+        <div id="compare-summary" class="compare-summary"></div>
+
+        <button id="compare-download-btn" class="btn btn-secondary" type="button" hidden>Descargar CSV de discrepancias</button>
+
+        <details class="compare-details" open>
+          <summary>Del Callejero Fiscal, no encontradas en el mapa</summary>
+          <ul id="compare-only-official" class="compare-list"></ul>
+        </details>
+
+        <details class="compare-details">
+          <summary>En el mapa, no encontradas en el Callejero Fiscal</summary>
+          <ul id="compare-only-map" class="compare-list"></ul>
+        </details>
+      </div>
+    </div>
+
     <p class="attribution">
       Mapa: © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>
       © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>
       · Datos: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a>
+      · Callejero Fiscal 2026: © Ayuntamiento de Córdoba
     </p>
   </aside>
 
@@ -61,5 +97,8 @@
   <script src="js/config.js?v=5"></script>
   <script src="js/map.js?v=5"></script>
   <script src="js/streets.js?v=5"></script>
+  <script src="js/official-streets.js?v=1"></script>
+  <script src="js/compare.js?v=1"></script>
+  <script src="js/compare-ui.js?v=1"></script>
 </body>
 </html>

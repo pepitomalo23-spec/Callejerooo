@@ -281,6 +281,7 @@
       }
       streetsByName = found;
       startQuizIfNeeded(map);
+      document.dispatchEvent(new CustomEvent("callejero:streets-updated"));
       return;
     }
 
@@ -294,8 +295,21 @@
       if (currentIndex >= 0) {
         progressEl.textContent = (currentIndex + 1) + " / " + quizOrder.length;
       }
+      document.dispatchEvent(new CustomEvent("callejero:streets-updated"));
     }
   }
+
+  // API mínima para que otros scripts (comparador con el Callejero Fiscal)
+  // puedan leer qué calles ha detectado ya el mapa, sin duplicar el escaneo
+  // de teselas vectoriales que hace este archivo.
+  window.CallejeroQuiz = {
+    getStreetNames: function () {
+      return Array.from(streetsByName.keys());
+    },
+    getMap: function () {
+      return window._map || null;
+    }
+  };
 
   function init() {
     waitForMap(function (map) {
