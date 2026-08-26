@@ -1,30 +1,14 @@
 (function () {
   "use strict";
 
-  // Bounding box del núcleo urbano de Córdoba (sur, oeste, norte, este).
-  // Usamos un bbox en lugar de buscar el área administrativa "Córdoba" por
-  // nombre: es más ligero para Overpass y evita ambigüedad con otras
-  // localidades llamadas Córdoba en el mundo.
-  const BBOX = "37.83,-4.88,37.93,-4.72";
+  // En vez de pedir las calles a un servicio externo (Overpass), las leemos
+  // directamente de las teselas vectoriales que MapTiler ya está sirviendo
+  // para dibujar el mapa. Así no añadimos ninguna dependencia de red nueva:
+  // si el mapa se ve, este panel funciona.
 
-  // Vías con nombre dentro del bbox, limitadas a tipos relevantes para el
-  // callejero (se excluyen caminos peatonales/senderos poco útiles).
-  const OVERPASS_QUERY =
-    '[out:json][timeout:25];\n' +
-    '(\n' +
-    '  way["highway"~"^(primary|secondary|tertiary|residential|unclassified|living_street|primary_link|secondary_link|tertiary_link)$"]["name"](' + BBOX + ');\n' +
-    ');\n' +
-    'out geom;';
-
-  // Varios servidores públicos de Overpass, por si el principal está
-  // saturado o caído: se prueban en orden hasta que uno funcione.
-  const OVERPASS_ENDPOINTS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.openstreetmap.ru/api/interpreter"
-  ];
-
-  const FETCH_TIMEOUT_MS = 20000;
+  // Clases de vía a excluir (senderos, escaleras, etc. poco útiles para el
+  // callejero). Si una vía no tiene 'class', se incluye por defecto.
+  const EXCLUDED_CLASSES = ["path", "track", "steps", "cycleway", "pedestrian", "service"];
 
   const HIGHLIGHT_SOURCE_ID = "street-highlight-source";
   const HIGHLIGHT_CASING_LAYER_ID = "street-highlight-casing";
@@ -44,6 +28,9 @@
   let quizOrder = [];
   let currentIndex = -1;
   let currentName = null;
+  let quizStarted = false;
+  let vectorSourceId = null;
+  let candidateLayers = [];
 
   function setStatus(message, showRetry) {
     statusTextEl.textContent = message;
@@ -69,13 +56,7 @@
 
   function waitForMap(callback) {
     if (window._map) {
-      if (window._map.loaded()) {
-        callback(window._map);
-      } else {
-        window._map.on("load", function () {
-          callback(window._map);
-        });
-      }
+      callback(window._map);
     } else {
       setTimeout(function () {
         waitForMap(callback);
@@ -83,65 +64,102 @@
     }
   }
 
-  function fetchWithTimeout(url, options, timeoutMs) {
-    const controller = new AbortController();
-    const timer = setTimeout(function () { controller.abort(); }, timeoutMs);
-    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
-      .finally(function () { clearTimeout(timer); });
-  }
+  // Encuentra la fuente vectorial del mapa y las capas de esa fuente que
+  // parecen contener nombres de vías, mirando el propio estilo cargado
+  // (así funciona con cualquier estilo de MapTiler, no solo streets-v2).
+  function detectRoadLayers(map) {
+    const style = map.getStyle();
+    if (!style) return;
 
-  async function fetchFromEndpoint(url) {
-    const response = await fetchWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "data=" + encodeURIComponent(OVERPASS_QUERY)
-      },
-      FETCH_TIMEOUT_MS
-    );
+    const vectorSourceIds = Object.keys(style.sources || {}).filter(function (id) {
+      return style.sources[id].type === "vector";
+    });
+    if (vectorSourceIds.length === 0) return;
 
-    if (!response.ok) {
-      throw new Error("respondió con estado " + response.status);
-    }
+    vectorSourceId = vectorSourceIds[0];
 
-    return response.json();
-  }
-
-  // Prueba cada servidor Overpass por orden hasta que uno funcione.
-  async function fetchStreets() {
-    let lastError = null;
-
-    for (let i = 0; i < OVERPASS_ENDPOINTS.length; i++) {
-      const endpoint = OVERPASS_ENDPOINTS[i];
-      try {
-        const data = await fetchFromEndpoint(endpoint);
-        return parseOverpassData(data);
-      } catch (err) {
-        lastError = err;
-        console.warn("[Callejero] Falló " + endpoint + ": " + err.message);
+    const layerNames = new Set();
+    (style.layers || []).forEach(function (layer) {
+      if (layer.source === vectorSourceId && layer["source-layer"]) {
+        layerNames.add(layer["source-layer"]);
       }
-    }
+    });
 
-    throw lastError || new Error("no se pudo contactar con ningún servidor Overpass");
+    const names = Array.from(layerNames);
+    // Preferimos la capa "..._name" (líneas ya unidas por nombre, pensada
+    // para etiquetar), y si no existe, cualquier capa de transporte/vías.
+    const namedFirst = names.filter(function (n) { return /transportation.*name|road.*name|street.*name/i.test(n); });
+    const others = names.filter(function (n) { return /transportation|road|street|highway/i.test(n) && namedFirst.indexOf(n) === -1; });
+    candidateLayers = namedFirst.concat(others);
   }
 
-  function parseOverpassData(data) {
+  function isExcludedClass(props) {
+    if (!props || !props.class) return false;
+    return EXCLUDED_CLASSES.indexOf(props.class) !== -1;
+  }
+
+  function addSegment(byName, name, coords) {
+    if (!name || coords.length < 2) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (!byName.has(trimmed)) byName.set(trimmed, []);
+    // Evita añadir el mismo tramo dos veces (los mosaicos vecinos se
+    // solapan un poco y pueden repetir features).
+    const segments = byName.get(trimmed);
+    const key = JSON.stringify(coords);
+    if (segments._seen && segments._seen.has(key)) return;
+    if (!segments._seen) Object.defineProperty(segments, "_seen", { value: new Set(), enumerable: false });
+    segments._seen.add(key);
+    segments.push(coords);
+  }
+
+  // Lee las calles con nombre presentes en las teselas ya cargadas por el
+  // mapa para la vista actual.
+  function scanLoadedStreets(map) {
+    if (!vectorSourceId || candidateLayers.length === 0) return new Map();
+
     const byName = new Map();
 
-    (data.elements || []).forEach(function (el) {
-      if (el.type !== "way" || !el.geometry || !el.tags || !el.tags.name) return;
-      const coords = el.geometry
-        .filter(function (pt) { return pt && typeof pt.lon === "number" && typeof pt.lat === "number"; })
-        .map(function (pt) { return [pt.lon, pt.lat]; });
-      if (coords.length < 2) return;
+    candidateLayers.forEach(function (layerName) {
+      let features;
+      try {
+        features = map.querySourceFeatures(vectorSourceId, { sourceLayer: layerName });
+      } catch (err) {
+        features = [];
+      }
 
-      const name = el.tags.name.trim();
-      if (!byName.has(name)) byName.set(name, []);
-      byName.get(name).push(coords);
+      features.forEach(function (feature) {
+        const props = feature.properties || {};
+        if (!props.name) return;
+        if (isExcludedClass(props)) return;
+        if (!feature.geometry) return;
+
+        if (feature.geometry.type === "LineString") {
+          addSegment(byName, props.name, feature.geometry.coordinates);
+        } else if (feature.geometry.type === "MultiLineString") {
+          feature.geometry.coordinates.forEach(function (coords) {
+            addSegment(byName, props.name, coords);
+          });
+        }
+      });
     });
 
     return byName;
+  }
+
+  function mergeStreets(into, additions) {
+    let addedNew = false;
+    additions.forEach(function (segments, name) {
+      if (!into.has(name)) {
+        into.set(name, []);
+        addedNew = true;
+      }
+      const target = into.get(name);
+      segments.forEach(function (coords) {
+        target.push(coords);
+      });
+    });
+    return addedNew;
   }
 
   function ensureHighlightLayers(map) {
@@ -152,17 +170,12 @@
       data: { type: "FeatureCollection", features: [] }
     });
 
-    // Contorno blanco para que la calle resalte sobre el estilo del mapa
     map.addLayer({
       id: HIGHLIGHT_CASING_LAYER_ID,
       type: "line",
       source: HIGHLIGHT_SOURCE_ID,
       layout: { "line-join": "round", "line-cap": "round" },
-      paint: {
-        "line-color": "#ffffff",
-        "line-width": 9,
-        "line-opacity": 0.9
-      }
+      paint: { "line-color": "#ffffff", "line-width": 9, "line-opacity": 0.9 }
     });
 
     map.addLayer({
@@ -170,11 +183,7 @@
       type: "line",
       source: HIGHLIGHT_SOURCE_ID,
       layout: { "line-join": "round", "line-cap": "round" },
-      paint: {
-        "line-color": "#d9581f",
-        "line-width": 5,
-        "line-opacity": 1
-      }
+      paint: { "line-color": "#d9581f", "line-width": 5, "line-opacity": 1 }
     });
   }
 
@@ -186,11 +195,7 @@
   function highlightStreet(map, name) {
     const segments = streetsByName.get(name) || [];
     const features = segments.map(function (coords) {
-      return {
-        type: "Feature",
-        properties: {},
-        geometry: { type: "LineString", coordinates: coords }
-      };
+      return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } };
     });
 
     const source = map.getSource(HIGHLIGHT_SOURCE_ID);
@@ -208,7 +213,6 @@
     });
 
     if (bounds) {
-      // El padding izquierdo deja hueco para el panel lateral en escritorio
       const isNarrow = window.innerWidth <= 640;
       map.fitBounds(bounds, {
         padding: isNarrow
@@ -243,32 +247,57 @@
     goToStreet(map, index);
   }
 
-  async function load(map) {
-    setStatus("Cargando calles…", false);
-    try {
-      streetsByName = await fetchStreets();
-    } catch (err) {
-      setStatus(
-        "No se pudieron cargar las calles (el servicio de OpenStreetMap puede estar saturado). " + err.message + ".",
-        true
-      );
-      return;
-    }
-
-    if (streetsByName.size === 0) {
-      setStatus("No se encontraron calles con nombre en esa zona.", true);
-      return;
-    }
-
+  function startQuizIfNeeded(map) {
+    if (quizStarted || streetsByName.size === 0) return;
+    quizStarted = true;
     buildQuizOrder();
     showQuiz();
     goToStreet(map, 0);
   }
 
+  // Se llama cada vez que el mapa termina de cargar teselas (al inicio y
+  // tras mover/hacer zoom): añade cualquier calle nueva que aparezca en la
+  // vista actual al conjunto de preguntas, sin reiniciar el progreso.
+  function refresh(map) {
+    const found = scanLoadedStreets(map);
+
+    if (!quizStarted) {
+      if (found.size === 0) {
+        setStatus("No se encontraron calles con nombre en la vista actual del mapa. Mueve o aleja el mapa e inténtalo de nuevo.", true);
+        return;
+      }
+      streetsByName = found;
+      startQuizIfNeeded(map);
+      return;
+    }
+
+    const addedNew = mergeStreets(streetsByName, found);
+    if (addedNew) {
+      const known = new Set(quizOrder);
+      const newNames = Array.from(streetsByName.keys()).filter(function (n) { return !known.has(n); });
+      // Las calles nuevas se añaden barajadas al final de la ronda actual,
+      // así aparecerán sin interrumpir la calle que se esté preguntando.
+      quizOrder = quizOrder.concat(shuffle(newNames));
+      if (currentIndex >= 0) {
+        progressEl.textContent = (currentIndex + 1) + " / " + quizOrder.length;
+      }
+    }
+  }
+
   function init() {
     waitForMap(function (map) {
       ensureHighlightLayers(map);
-      load(map);
+      setStatus("Cargando calles…", false);
+
+      const onIdle = function () {
+        detectRoadLayers(map);
+        refresh(map);
+      };
+
+      if (map.loaded()) {
+        onIdle();
+      }
+      map.on("idle", onIdle);
 
       resolveBtn.addEventListener("click", function () {
         highlightStreet(map, currentName);
@@ -286,7 +315,8 @@
       });
 
       retryBtn.addEventListener("click", function () {
-        load(map);
+        setStatus("Buscando calles en la vista actual…", false);
+        onIdle();
       });
     });
   }
