@@ -9,7 +9,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-<link rel="stylesheet" href="css/style.css?v=6" />
+<link rel="stylesheet" href="css/style.css?v=7" />
 </head>
 <body>
 
@@ -77,6 +77,15 @@
       </div>
     </div>
 
+    <!-- Identificar / corregir un tramo mal etiquetado -->
+    <div class="debug-section">
+      <button id="debug-toggle-btn" class="btn btn-secondary" type="button" aria-pressed="false">
+        Identificar calle (clic en el mapa)
+      </button>
+      <p id="debug-result" class="debug-result" hidden></p>
+      <button id="debug-copy-btn" class="btn btn-secondary" type="button" hidden>Copiar regla de corrección</button>
+    </div>
+
     <p class="attribution">
       Mapa: © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>
       © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>
@@ -96,7 +105,9 @@
 
   <script src="js/config.js?v=5"></script>
   <script src="js/map.js?v=5"></script>
-  <script src="js/streets.js?v=5"></script>
+  <script src="js/street-corrections.js?v=1"></script>
+  <script src="js/streets.js?v=6"></script>
+  <script src="js/street-debug.js?v=1"></script>
   <script src="js/official-streets.js?v=1"></script>
   <script src="js/compare.js?v=1"></script>
   <script src="js/compare-ui.js?v=1"></script>

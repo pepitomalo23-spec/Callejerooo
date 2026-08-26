@@ -225,6 +225,45 @@ html, body {
 }
 
 /* ============================
+   Identificador de tramos (depuración)
+   ============================ */
+
+.debug-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.debug-result {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d5dce1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.debug-result pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 6px 0 0;
+}
+
+.debug-result code {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ============================
    Comparador con Callejero Fiscal
    ============================ */
 

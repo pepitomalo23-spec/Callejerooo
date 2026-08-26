@@ -113,8 +113,11 @@
 
   function addSegment(byName, name, coords) {
     if (!name || coords.length < 2) return;
-    const trimmed = name.trim();
+    let trimmed = name.trim();
     if (!trimmed) return;
+    if (window.applyStreetCorrections) {
+      trimmed = window.applyStreetCorrections(trimmed, coords);
+    }
     if (!byName.has(trimmed)) byName.set(trimmed, []);
     // Evita añadir el mismo tramo dos veces (los mosaicos vecinos se
     // solapan un poco y pueden repetir features).
@@ -305,6 +308,9 @@
   window.CallejeroQuiz = {
     getStreetNames: function () {
       return Array.from(streetsByName.keys());
+    },
+    getAllStreets: function () {
+      return streetsByName;
     },
     getMap: function () {
       return window._map || null;
