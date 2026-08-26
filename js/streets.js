@@ -54,9 +54,22 @@
     return array;
   }
 
+  // Espera a que exista el mapa Y a que su estilo/teselas iniciales hayan
+  // terminado de cargar. Antes solo se comprobaba que window._map existiera,
+  // pero esa variable se crea justo al instanciar el mapa (antes de que el
+  // estilo termine de cargar); intentar añadir capas en ese momento hace que
+  // MapLibre lance un error ("Style is not done loading") que dejaba este
+  // script parado para siempre en "Cargando calles…".
   function waitForMap(callback) {
     if (window._map) {
-      callback(window._map);
+      const map = window._map;
+      if (map.loaded()) {
+        callback(map);
+      } else {
+        map.once("load", function () {
+          callback(map);
+        });
+      }
     } else {
       setTimeout(function () {
         waitForMap(callback);
@@ -286,38 +299,48 @@
 
   function init() {
     waitForMap(function (map) {
-      ensureHighlightLayers(map);
-      setStatus("Cargando calles…", false);
+      try {
+        ensureHighlightLayers(map);
+        setStatus("Cargando calles…", false);
 
-      const onIdle = function () {
-        detectRoadLayers(map);
-        refresh(map);
-      };
+        const onIdle = function () {
+          try {
+            detectRoadLayers(map);
+            refresh(map);
+          } catch (err) {
+            console.error("[Callejero] Error buscando calles:", err);
+            setStatus("Error buscando calles: " + err.message, true);
+          }
+        };
 
-      if (map.loaded()) {
-        onIdle();
+        if (map.loaded()) {
+          onIdle();
+        }
+        map.on("idle", onIdle);
+
+        resolveBtn.addEventListener("click", function () {
+          highlightStreet(map, currentName);
+          resolveBtn.hidden = true;
+          nextBtn.hidden = false;
+        });
+
+        nextBtn.addEventListener("click", function () {
+          nextStreet(map);
+        });
+
+        restartBtn.addEventListener("click", function () {
+          buildQuizOrder();
+          goToStreet(map, 0);
+        });
+
+        retryBtn.addEventListener("click", function () {
+          setStatus("Buscando calles en la vista actual…", false);
+          onIdle();
+        });
+      } catch (err) {
+        console.error("[Callejero] Error inicializando el quiz:", err);
+        setStatus("Error inicializando el quiz: " + err.message, true);
       }
-      map.on("idle", onIdle);
-
-      resolveBtn.addEventListener("click", function () {
-        highlightStreet(map, currentName);
-        resolveBtn.hidden = true;
-        nextBtn.hidden = false;
-      });
-
-      nextBtn.addEventListener("click", function () {
-        nextStreet(map);
-      });
-
-      restartBtn.addEventListener("click", function () {
-        buildQuizOrder();
-        goToStreet(map, 0);
-      });
-
-      retryBtn.addEventListener("click", function () {
-        setStatus("Buscando calles en la vista actual…", false);
-        onIdle();
-      });
     });
   }
 
