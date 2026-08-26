@@ -15,6 +15,35 @@
 
   <div id="map"></div>
 
+  <!-- Panel lateral: preguntas de calles del callejero -->
+  <aside id="sidebar">
+    <header class="sidebar-header">
+      <span class="sidebar-eyebrow">Callejero</span>
+      <h1>Córdoba</h1>
+    </header>
+
+    <div id="sidebar-status" class="sidebar-status">Cargando calles…</div>
+
+    <div id="sidebar-quiz" class="sidebar-quiz" hidden>
+      <p id="progress" class="progress"></p>
+
+      <p class="prompt-label">Localiza esta calle</p>
+      <div class="plaque">
+        <span id="street-name" class="plaque-text"></span>
+      </div>
+
+      <div class="buttons">
+        <button id="resolve-btn" class="btn btn-primary" type="button">Resolver</button>
+        <button id="next-btn" class="btn btn-primary" type="button" hidden>Siguiente calle</button>
+      </div>
+      <button id="restart-btn" class="btn btn-secondary" type="button">Reordenar y reiniciar</button>
+    </div>
+
+    <p class="attribution">
+      Calles: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a>
+    </p>
+  </aside>
+
   <!-- Aviso de error, oculto por defecto -->
   <div id="error-banner" class="error-banner" hidden>
     <strong>No se pudo cargar el mapa.</strong>
@@ -26,5 +55,6 @@
 
   <script src="js/config.js"></script>
   <script src="js/map.js"></script>
+  <script src="js/streets.js"></script>
 </body>
 </html>
