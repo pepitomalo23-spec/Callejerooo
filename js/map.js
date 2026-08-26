@@ -20,19 +20,17 @@
     loadingEl.classList.add("hidden");
   }
 
-  // Comprobación básica: si la clave no está rellenada, avisamos claramente
-  if (!MAPTILER_API_KEY || MAPTILER_API_KEY.trim() === "") {
-    showError("Falta la API key de MapTiler en js/config.js.");
+  // Comprobación básica: si no hay URL de estilo configurada, avisamos claramente
+  if (!MAP_STYLE_URL || MAP_STYLE_URL.trim() === "") {
+    showError("Falta MAP_STYLE_URL en js/config.js.");
     return;
   }
-
-  const styleUrl = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_API_KEY}`;
 
   let map;
   try {
     map = new maplibregl.Map({
       container: "map",
-      style: styleUrl,
+      style: MAP_STYLE_URL,
       center: CORDOBA_CENTER,
       zoom: CORDOBA_ZOOM,
       // Todas estas opciones de interacción vienen activadas por defecto en MapLibre,
@@ -81,11 +79,11 @@
       msg = err.message;
 
       if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
-        msg = "La API key de MapTiler no es válida o no está autorizada (401).";
+        msg = "El servidor de mapas ha rechazado la petición (401 - no autorizado).";
       } else if (msg.includes("403")) {
-        msg = "Acceso denegado por MapTiler (403). Revisa las restricciones de dominio de tu clave.";
+        msg = "Acceso denegado por el servidor de mapas (403).";
       } else if (msg.toLowerCase().includes("failed to fetch") || msg.toLowerCase().includes("networkerror")) {
-        msg = "No se pudo conectar con los servidores de MapTiler. Revisa tu conexión a internet.";
+        msg = "No se pudo conectar con el servidor de teselas del mapa. Revisa tu conexión a internet.";
       }
     }
 
