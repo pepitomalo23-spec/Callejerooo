@@ -113,6 +113,13 @@ html, body {
 .sidebar-status {
   font-size: 14px;
   color: #b7c2cb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-status p {
+  margin: 0;
 }
 
 .sidebar-quiz {

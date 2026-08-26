@@ -1,23 +1,38 @@
 (function () {
   "use strict";
 
-  // Consulta Overpass: todas las vías con nombre dentro del término municipal
-  // de Córdoba, limitada a tipos de calle relevantes (se excluyen caminos
-  // peatonales/senderos poco útiles para el callejero de la oposición).
-  const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+  // Bounding box del núcleo urbano de Córdoba (sur, oeste, norte, este).
+  // Usamos un bbox en lugar de buscar el área administrativa "Córdoba" por
+  // nombre: es más ligero para Overpass y evita ambigüedad con otras
+  // localidades llamadas Córdoba en el mundo.
+  const BBOX = "37.83,-4.88,37.93,-4.72";
+
+  // Vías con nombre dentro del bbox, limitadas a tipos relevantes para el
+  // callejero (se excluyen caminos peatonales/senderos poco útiles).
   const OVERPASS_QUERY =
-    '[out:json][timeout:30];\n' +
-    'area["name"="Córdoba"]["boundary"="administrative"]["admin_level"="8"]->.a;\n' +
+    '[out:json][timeout:25];\n' +
     '(\n' +
-    '  way["highway"~"^(primary|secondary|tertiary|residential|unclassified|living_street|primary_link|secondary_link|tertiary_link)$"]["name"](area.a);\n' +
+    '  way["highway"~"^(primary|secondary|tertiary|residential|unclassified|living_street|primary_link|secondary_link|tertiary_link)$"]["name"](' + BBOX + ');\n' +
     ');\n' +
     'out geom;';
+
+  // Varios servidores públicos de Overpass, por si el principal está
+  // saturado o caído: se prueban en orden hasta que uno funcione.
+  const OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter"
+  ];
+
+  const FETCH_TIMEOUT_MS = 20000;
 
   const HIGHLIGHT_SOURCE_ID = "street-highlight-source";
   const HIGHLIGHT_CASING_LAYER_ID = "street-highlight-casing";
   const HIGHLIGHT_LAYER_ID = "street-highlight-layer";
 
   const statusEl = document.getElementById("sidebar-status");
+  const statusTextEl = document.getElementById("status-text");
+  const retryBtn = document.getElementById("retry-btn");
   const quizEl = document.getElementById("sidebar-quiz");
   const progressEl = document.getElementById("progress");
   const streetNameEl = document.getElementById("street-name");
@@ -30,8 +45,9 @@
   let currentIndex = -1;
   let currentName = null;
 
-  function setStatus(message) {
-    statusEl.textContent = message;
+  function setStatus(message, showRetry) {
+    statusTextEl.textContent = message;
+    retryBtn.hidden = !showRetry;
     statusEl.hidden = false;
     quizEl.hidden = true;
   }
@@ -67,18 +83,50 @@
     }
   }
 
-  async function fetchStreets() {
-    const response = await fetch(OVERPASS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "data=" + encodeURIComponent(OVERPASS_QUERY)
-    });
+  function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+      .finally(function () { clearTimeout(timer); });
+  }
+
+  async function fetchFromEndpoint(url) {
+    const response = await fetchWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(OVERPASS_QUERY)
+      },
+      FETCH_TIMEOUT_MS
+    );
 
     if (!response.ok) {
-      throw new Error("Overpass respondió con estado " + response.status);
+      throw new Error("respondió con estado " + response.status);
     }
 
-    const data = await response.json();
+    return response.json();
+  }
+
+  // Prueba cada servidor Overpass por orden hasta que uno funcione.
+  async function fetchStreets() {
+    let lastError = null;
+
+    for (let i = 0; i < OVERPASS_ENDPOINTS.length; i++) {
+      const endpoint = OVERPASS_ENDPOINTS[i];
+      try {
+        const data = await fetchFromEndpoint(endpoint);
+        return parseOverpassData(data);
+      } catch (err) {
+        lastError = err;
+        console.warn("[Callejero] Falló " + endpoint + ": " + err.message);
+      }
+    }
+
+    throw lastError || new Error("no se pudo contactar con ningún servidor Overpass");
+  }
+
+  function parseOverpassData(data) {
     const byName = new Map();
 
     (data.elements || []).forEach(function (el) {
@@ -195,25 +243,32 @@
     goToStreet(map, index);
   }
 
+  async function load(map) {
+    setStatus("Cargando calles…", false);
+    try {
+      streetsByName = await fetchStreets();
+    } catch (err) {
+      setStatus(
+        "No se pudieron cargar las calles (el servicio de OpenStreetMap puede estar saturado). " + err.message + ".",
+        true
+      );
+      return;
+    }
+
+    if (streetsByName.size === 0) {
+      setStatus("No se encontraron calles con nombre en esa zona.", true);
+      return;
+    }
+
+    buildQuizOrder();
+    showQuiz();
+    goToStreet(map, 0);
+  }
+
   function init() {
-    waitForMap(async function (map) {
+    waitForMap(function (map) {
       ensureHighlightLayers(map);
-
-      try {
-        streetsByName = await fetchStreets();
-      } catch (err) {
-        setStatus("No se pudieron cargar las calles: " + err.message);
-        return;
-      }
-
-      if (streetsByName.size === 0) {
-        setStatus("No se encontraron calles con nombre en Córdoba.");
-        return;
-      }
-
-      buildQuizOrder();
-      showQuiz();
-      goToStreet(map, 0);
+      load(map);
 
       resolveBtn.addEventListener("click", function () {
         highlightStreet(map, currentName);
@@ -228,6 +283,10 @@
       restartBtn.addEventListener("click", function () {
         buildQuizOrder();
         goToStreet(map, 0);
+      });
+
+      retryBtn.addEventListener("click", function () {
+        load(map);
       });
     });
   }
