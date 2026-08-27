@@ -1,0 +1,8 @@
+{
+  "generatedAt": null,
+  "source": null,
+  "note": "Placeholder: aún no se ha ejecutado scripts/fetch-overpass-streets.mjs (ver .github/workflows/update-street-geometry.yml). Mientras esté vacío, la app sigue funcionando con el escaneo en vivo de teselas como única fuente, igual que antes.",
+  "totalStreets": 0,
+  "totalSegments": 0,
+  "streets": {}
+}
