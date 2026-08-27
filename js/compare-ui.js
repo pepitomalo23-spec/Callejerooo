@@ -29,8 +29,7 @@
   const scanBtn = document.getElementById("compare-scan-btn");
   const scanStatusEl = document.getElementById("compare-scan-status");
   const summaryEl = document.getElementById("compare-summary");
-  const onlyOfficialEl = document.getElementById("compare-only-official");
-  const onlyMapEl = document.getElementById("compare-only-map");
+  const mismatchesEl = document.getElementById("compare-mismatches");
   const downloadBtn = document.getElementById("compare-download-btn");
 
   let lastResult = null;
@@ -41,19 +40,45 @@
     });
   }
 
-  function renderList(container, items, emptyMessage) {
+  // Une las dos categorías de discrepancia (no encontrada en el mapa / no
+  // encontrada en el callejero fiscal) en una única lista, etiquetando cada
+  // fila para distinguirlas, y sin incluir nunca las calles que coinciden.
+  function buildMismatchItems(result) {
+    const items = [];
+    result.onlyOfficial.forEach(function (e) {
+      items.push({
+        sortKey: e.nombre,
+        label: "No aparece en el mapa",
+        text: e.tipo + " " + e.nombre
+      });
+    });
+    result.onlyMap.forEach(function (name) {
+      items.push({
+        sortKey: name,
+        label: "En el mapa, no coincide con el Callejero Fiscal",
+        text: name
+      });
+    });
+    items.sort(function (a, b) { return a.sortKey.localeCompare(b.sortKey, "es"); });
+    return items;
+  }
+
+  function renderMismatches(items) {
     if (items.length === 0) {
-      container.innerHTML = "<li class=\"compare-empty\">" + emptyMessage + "</li>";
+      mismatchesEl.innerHTML = "<li class=\"compare-empty\">Ninguna discrepancia — todo lo comparado hasta ahora coincide.</li>";
       return;
     }
-    const max = 400; // evita colgar el navegador si hay miles de discrepancias
+    const max = 500; // evita colgar el navegador si hay miles de discrepancias
     const shown = items.slice(0, max);
-    container.innerHTML = shown.map(function (item) { return "<li>" + escapeHtml(item) + "</li>"; }).join("");
+    mismatchesEl.innerHTML = shown.map(function (item) {
+      return "<li><span class=\"compare-tag\">" + escapeHtml(item.label) + "</span>" +
+        escapeHtml(item.text) + "</li>";
+    }).join("");
     if (items.length > max) {
       const li = document.createElement("li");
       li.className = "compare-empty";
       li.textContent = "… y " + (items.length - max) + " más (descarga el CSV para verlas todas).";
-      container.appendChild(li);
+      mismatchesEl.appendChild(li);
     }
   }
 
@@ -72,24 +97,11 @@
     const result = window.CallejeroCompare.compare(mapNames, window.OFFICIAL_STREETS);
     lastResult = result;
 
-    summaryEl.innerHTML =
-      "Calles detectadas en el mapa (zona visitada): <strong>" + result.totalMap + "</strong><br>" +
-      "Vías en el Callejero Fiscal 2026: <strong>" + result.totalOfficial + "</strong><br>" +
-      "Coincidencias encontradas: <strong>" + result.matchedCount + "</strong><br>" +
-      "Del callejero fiscal, sin encontrar en el mapa: <strong>" + result.onlyOfficial.length + "</strong><br>" +
-      "En el mapa, sin encontrar en el callejero fiscal: <strong>" + result.onlyMap.length + "</strong>";
+    const items = buildMismatchItems(result);
+    summaryEl.textContent = "Discrepancias encontradas: " + items.length +
+      " (de " + result.totalOfficial + " vías del callejero fiscal y " + result.totalMap + " detectadas en la zona del mapa ya escaneada).";
 
-    renderList(
-      onlyOfficialEl,
-      result.onlyOfficial.map(function (e) { return e.tipo + " " + e.nombre; }),
-      "Ninguna — todas las vías del callejero fiscal aparecen en la zona del mapa ya escaneada."
-    );
-    renderList(
-      onlyMapEl,
-      result.onlyMap,
-      "Ninguna — todas las calles del mapa están en el callejero fiscal."
-    );
-
+    renderMismatches(items);
     downloadBtn.hidden = false;
   }
 

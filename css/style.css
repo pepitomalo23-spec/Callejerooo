@@ -405,25 +405,12 @@ html, body {
 }
 
 .compare-summary {
+  margin: 0;
   font-size: 13px;
   line-height: 1.7;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
   padding: 10px 12px;
-}
-
-.compare-details {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-
-.compare-details summary {
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: #eef2f5;
-  padding: 4px 0;
 }
 
 .compare-list {
@@ -434,6 +421,27 @@ html, body {
   font-size: 12px;
   line-height: 1.6;
   color: #d5dce1;
+}
+
+.compare-list-main {
+  max-height: 320px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px 10px 30px;
+}
+
+.compare-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #11161c;
+  background: #f1c40f;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .compare-list .compare-empty {

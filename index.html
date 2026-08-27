@@ -9,7 +9,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-<link rel="stylesheet" href="css/style.css?v=8" />
+<link rel="stylesheet" href="css/style.css?v=9" />
 </head>
 <body>
 
@@ -50,9 +50,10 @@
 
       <div id="compare-panel" class="compare-panel" hidden>
         <p class="compare-hint">
-          Compara las calles ya detectadas en el mapa contra el listado oficial del
-          Callejero Fiscal 2026. Es una comparación aproximada (nombres, acentos y
-          orden de palabras pueden variar), revisa los resultados a mano.
+          Solo se listan las calles que <strong>no coinciden</strong> con el Callejero Fiscal 2026:
+          las que no se encuentran en el mapa, y las que aparecen en el mapa pero con un nombre
+          distinto al del PDF. Las que ya están igual no se muestran. Es una comparación
+          aproximada (acentos, "Avda." vs "Avenida"...), revisa los resultados a mano.
         </p>
 
         <div class="compare-actions">
@@ -61,19 +62,11 @@
         </div>
         <p id="compare-scan-status" class="compare-scan-status"></p>
 
-        <div id="compare-summary" class="compare-summary"></div>
+        <p id="compare-summary" class="compare-summary"></p>
 
         <button id="compare-download-btn" class="btn btn-secondary" type="button" hidden>Descargar CSV de discrepancias</button>
 
-        <details class="compare-details" open>
-          <summary>Del Callejero Fiscal, no encontradas en el mapa</summary>
-          <ul id="compare-only-official" class="compare-list"></ul>
-        </details>
-
-        <details class="compare-details">
-          <summary>En el mapa, no encontradas en el Callejero Fiscal</summary>
-          <ul id="compare-only-map" class="compare-list"></ul>
-        </details>
+        <ul id="compare-mismatches" class="compare-list compare-list-main"></ul>
       </div>
     </div>
 
