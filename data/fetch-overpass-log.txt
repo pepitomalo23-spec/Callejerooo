@@ -1,28 +1,6 @@
-[fetch-overpass-streets] Probando https://overpass-api.de/api/interpreter ...
-[fetch-overpass-streets] Falló https://overpass-api.de/api/interpreter: HTTP 406 Not Acceptable — <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-<title>406 Not Acceptable</title>
-</head><body>
-<h1>Not Acceptable</h1>
-<p>An appropriate representation of the requested resource could not be found on this server.</p>
-<hr>
-<address>Apache/2.4.6
-[fetch-overpass-streets] Probando https://overpass.kumi.systems/api/interpreter ...
-[fetch-overpass-streets] Falló https://overpass.kumi.systems/api/interpreter: HTTP 502 Bad Gateway
-[fetch-overpass-streets] Probando https://lz4.overpass-api.de/api/interpreter ...
-[fetch-overpass-streets] Falló https://lz4.overpass-api.de/api/interpreter: HTTP 406 Not Acceptable — <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-<title>406 Not Acceptable</title>
-</head><body>
-<h1>Not Acceptable</h1>
-<p>An appropriate representation of the requested resource could not be found on this server.</p>
-<hr>
-<address>Apache/2.4.6
-[fetch-overpass-streets] ERROR: Todos los espejos de Overpass fallaron. Último error: HTTP 406 Not Acceptable — <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html><head>
-<title>406 Not Acceptable</title>
-</head><body>
-<h1>Not Acceptable</h1>
-<p>An appropriate representation of the requested resource could not be found on this server.</p>
-<hr>
-<address>Apache/2.4.6
+[fetch-overpass-streets] Probando https://overpass.private.coffee/api/interpreter ...
+[fetch-overpass-streets] Falló https://overpass.private.coffee/api/interpreter: HTTP 500 Internal Server Error — Internal Server Error
+[fetch-overpass-streets] Probando https://maps.mail.ru/osm/tools/overpass/api/interpreter ...
+[fetch-overpass-streets] OK: 26033 vías recibidas de https://maps.mail.ru/osm/tools/overpass/api/interpreter
+[fetch-overpass-streets] Escrito /home/runner/work/Callejerooo/Callejerooo/data/streets-geometry.json
+[fetch-overpass-streets] 7837 calles, 26033 tramos en total.
