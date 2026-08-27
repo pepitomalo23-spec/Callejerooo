@@ -173,6 +173,26 @@ html, body {
   text-align: center;
 }
 
+.unlocated-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #b7c2cb;
+  background: rgba(217, 88, 31, 0.12);
+  border: 1px solid rgba(217, 88, 31, 0.35);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.maps-fallback-link {
+  display: inline-block;
+  margin-top: 8px;
+  text-align: center;
+  text-decoration: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .buttons {
   display: flex;
 }

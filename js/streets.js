@@ -23,6 +23,8 @@
   const resolveBtn = document.getElementById("resolve-btn");
   const nextBtn = document.getElementById("next-btn");
   const restartBtn = document.getElementById("restart-btn");
+  const unlocatedHintEl = document.getElementById("unlocated-hint");
+  const mapsFallbackLinkEl = document.getElementById("maps-fallback-link");
 
   let streetsByName = new Map(); // nombre de calle -> array de tramos [[lng,lat], ...]
   let quizOrder = [];
@@ -52,6 +54,74 @@
       array[j] = tmp;
     }
     return array;
+  }
+
+  // Mismo criterio de normalización que street-registry.js (duplicado a
+  // propósito: este fichero no depende de que street-registry.js ya se
+  // haya cargado, ya que streets.js se carga antes en index.html).
+  function stripAccents(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function normalizeName(str) {
+    return stripAccents(str)
+      .toUpperCase()
+      .replace(/[^A-Z0-9 ]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // Calles del Callejero Fiscal (window.OFFICIAL_STREETS, ver
+  // official-streets.js) que todavía no tienen ningún tramo en
+  // streetsByName. Se recalcula cada vez que se llama, así que siempre
+  // refleja el estado actual: si una calle "sin localizar" aparece más
+  // tarde en OSM (escaneo en vivo o próxima ejecución mensual de la
+  // Action), deja de aparecer aquí sola, sin tocar código.
+  function getOfficialOnlyStreetNames() {
+    if (!window.OFFICIAL_STREETS) return [];
+    const knownNormalized = new Set();
+    streetsByName.forEach(function (_segments, name) {
+      knownNormalized.add(normalizeName(name));
+    });
+    const seen = new Set();
+    const result = [];
+    window.OFFICIAL_STREETS.forEach(function (o) {
+      const norm = normalizeName(o.nombre);
+      if (knownNormalized.has(norm) || seen.has(norm)) return;
+      seen.add(norm);
+      result.push(o.nombre);
+    });
+    return result;
+  }
+
+  // Busca los tramos de una calle por nombre exacto y, si no hay, por
+  // nombre normalizado (para que una calle preguntada con el nombre
+  // oficial ("Avenida de Cádiz") encuentre sus tramos aunque OSM los
+  // tenga con una grafía ligeramente distinta ("Avda. de Cádiz")).
+  function findSegmentsByAnyName(name) {
+    if (streetsByName.has(name)) return streetsByName.get(name);
+    const norm = normalizeName(name);
+    let found = null;
+    streetsByName.forEach(function (segments, key) {
+      if (!found && normalizeName(key) === norm) found = segments;
+    });
+    return found;
+  }
+
+  function buildGoogleMapsSearchUrl(name) {
+    const query = name + ", Córdoba, España";
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
+  }
+
+  function showUnlocatedFallback(name) {
+    if (!unlocatedHintEl || !mapsFallbackLinkEl) return;
+    mapsFallbackLinkEl.href = buildGoogleMapsSearchUrl(name);
+    unlocatedHintEl.hidden = false;
+  }
+
+  function hideUnlocatedFallback() {
+    if (!unlocatedHintEl) return;
+    unlocatedHintEl.hidden = true;
   }
 
   // Espera a que exista el mapa Y a que su estilo/teselas iniciales hayan
@@ -209,7 +279,19 @@
   }
 
   function highlightStreet(map, name) {
-    const segments = streetsByName.get(name) || [];
+    const segments = findSegmentsByAnyName(name);
+
+    // Calle oficial sin geometría todavía: no hay nada que resaltar en
+    // nuestro mapa. En vez de fallar o dejarlo en blanco, se ofrece un
+    // enlace a Google Maps para poder localizarla igualmente.
+    if (!segments || segments.length === 0) {
+      clearHighlight(map);
+      showUnlocatedFallback(name);
+      return;
+    }
+
+    hideUnlocatedFallback();
+
     const features = segments.map(function (coords) {
       return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } };
     });
@@ -241,7 +323,9 @@
   }
 
   function buildQuizOrder() {
-    quizOrder = shuffle(Array.from(streetsByName.keys()));
+    const knownNames = Array.from(streetsByName.keys());
+    const officialOnly = getOfficialOnlyStreetNames();
+    quizOrder = shuffle(knownNames.concat(officialOnly));
   }
 
   function goToStreet(map, index) {
@@ -250,6 +334,7 @@
     streetNameEl.textContent = currentName;
     progressEl.textContent = (currentIndex + 1) + " / " + quizOrder.length;
     clearHighlight(map);
+    hideUnlocatedFallback();
     resolveBtn.hidden = false;
     nextBtn.hidden = true;
   }
@@ -289,8 +374,17 @@
 
     const addedNew = mergeStreets(streetsByName, found);
     if (addedNew) {
-      const known = new Set(quizOrder);
-      const newNames = Array.from(streetsByName.keys()).filter(function (n) { return !known.has(n); });
+      // Comparamos por nombre NORMALIZADO, no literal: una calle ya podía
+      // estar en la ronda con su nombre oficial ("Avenida de Cádiz", sin
+      // geometría todavía) y ahora llegar desde OSM con una grafía algo
+      // distinta ("Avda. de Cádiz"). Si comparásemos el texto tal cual,
+      // se colaría un duplicado; con el nombre normalizado, esa calle
+      // sencillamente pasa a tener geometría (se "autocorrige" sola la
+      // próxima vez que se resuelva) en vez de aparecer dos veces.
+      const knownNormalized = new Set(quizOrder.map(normalizeName));
+      const newNames = Array.from(streetsByName.keys()).filter(function (n) {
+        return !knownNormalized.has(normalizeName(n));
+      });
       // Las calles nuevas se añaden barajadas al final de la ronda actual,
       // así aparecerán sin interrumpir la calle que se esté preguntando.
       quizOrder = quizOrder.concat(shuffle(newNames));
