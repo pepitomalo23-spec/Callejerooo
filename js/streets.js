@@ -271,22 +271,20 @@
     goToStreet(map, 0);
   }
 
-  // Se llama cada vez que el mapa termina de cargar teselas (al inicio y
-  // tras mover/hacer zoom): añade cualquier calle nueva que aparezca en la
-  // vista actual al conjunto de preguntas, sin reiniciar el progreso.
-  function refresh(map) {
-    const found = scanLoadedStreets(map);
-    if (window.applyStreetOverrides) window.applyStreetOverrides(found);
+  // Fusiona "found" (nombre -> tramos) dentro del estado del quiz, venga de
+  // donde venga: del escaneo en vivo de teselas (refresh) o de la geometría
+  // completa precalculada (loadStaticGeometry). Antes esta lógica estaba
+  // duplicada entre el arranque y las actualizaciones; unificarla es lo que
+  // permite que cualquiera de las dos fuentes pueda ser la primera en
+  // arrancar el quiz, sin pisarse entre ellas.
+  function incorporateStreets(map, found) {
+    if (!found || found.size === 0) return false;
 
     if (!quizStarted) {
-      if (found.size === 0) {
-        setStatus("No se encontraron calles con nombre en la vista actual del mapa. Mueve o aleja el mapa e inténtalo de nuevo.", true);
-        return;
-      }
-      streetsByName = found;
+      mergeStreets(streetsByName, found);
       startQuizIfNeeded(map);
       document.dispatchEvent(new CustomEvent("callejero:streets-updated"));
-      return;
+      return true;
     }
 
     const addedNew = mergeStreets(streetsByName, found);
@@ -301,6 +299,35 @@
       }
       document.dispatchEvent(new CustomEvent("callejero:streets-updated"));
     }
+    return addedNew;
+  }
+
+  // Se llama cada vez que el mapa termina de cargar teselas (al inicio y
+  // tras mover/hacer zoom): añade cualquier calle nueva que aparezca en la
+  // vista actual al conjunto de preguntas, sin reiniciar el progreso. Esto
+  // ahora es solo una red de seguridad (calles que OSM tenga pero que la
+  // geometría precalculada aún no incluya); la fuente principal es
+  // loadStaticGeometry, ver init().
+  function refresh(map) {
+    const found = scanLoadedStreets(map);
+    if (window.applyStreetOverrides) window.applyStreetOverrides(found);
+
+    const changed = incorporateStreets(map, found);
+
+    if (!quizStarted && !changed && streetsByName.size === 0) {
+      setStatus("No se encontraron calles con nombre en la vista actual del mapa. Mueve o aleja el mapa e inténtalo de nuevo.", true);
+    }
+  }
+
+  // Carga (una vez) la geometría completa precalculada por
+  // scripts/fetch-overpass-streets.mjs y la incorpora al quiz. Es
+  // independiente del escaneo de teselas: puede llegar antes o después de
+  // que el mapa esté listo, en cualquier orden.
+  function loadStaticGeometry(map) {
+    if (!window.CallejeroStaticGeometry) return;
+    window.CallejeroStaticGeometry.load().then(function (staticStreets) {
+      incorporateStreets(map, staticStreets);
+    });
   }
 
   // API mínima para que otros scripts (comparador con el Callejero Fiscal)
@@ -323,6 +350,12 @@
       try {
         ensureHighlightLayers(map);
         setStatus("Cargando calles…", false);
+
+        // Fuente principal: geometría completa precalculada (no depende de
+        // por dónde haya movido el usuario el mapa). Va en paralelo al
+        // escaneo de teselas de abajo; la primera que responda arranca el
+        // quiz, la otra solo añade lo que le falte.
+        loadStaticGeometry(map);
 
         const onIdle = function () {
           try {

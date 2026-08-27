@@ -1,0 +1,7 @@
+[fetch-overpass-streets] Probando https://overpass.private.coffee/api/interpreter ...
+[fetch-overpass-streets] Falló https://overpass.private.coffee/api/interpreter: HTTP 500 Internal Server Error — Internal Server Error
+[fetch-overpass-streets] Probando https://maps.mail.ru/osm/tools/overpass/api/interpreter ...
+[fetch-overpass-streets] OK: 6431 vías recibidas de https://maps.mail.ru/osm/tools/overpass/api/interpreter
+[fetch-overpass-streets] 1 vías descartadas por caer fuera del bbox de seguridad (probable error de área en el espejo usado, p. ej. Córdoba de otro país).
+[fetch-overpass-streets] Escrito /home/runner/work/Callejerooo/Callejerooo/data/streets-geometry.json
+[fetch-overpass-streets] 2729 calles, 6430 tramos en total.

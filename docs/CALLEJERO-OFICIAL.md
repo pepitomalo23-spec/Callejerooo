@@ -4,6 +4,36 @@ Este documento recoge lo verificado (no asumido) sobre las fuentes oficiales
 y el estado real de la integración, para no repetir la investigación cada
 vez que se retome este trabajo.
 
+## Actualización (27-01-2026 sesión): por qué las calles salían "a tramos"
+
+Causa raíz identificada: `streets.js` construía el callejero leyendo solo
+las teselas del mapa que el usuario ya había visto en su sesión
+(`map.querySourceFeatures`). Una calle larga solo aparecía completa cuando
+se había paseado el mapa por todos sus tramos, y las calles fuera de la
+vista actual simplemente no existían para la app todavía. El motivo de que
+estuviera hecho así (commit `05f398a`) es que la consulta a Overpass en vivo
+desde el navegador del usuario se colgaba hasta timeout por la red de ese
+usuario concreto, no por falta de clave ni configuración.
+
+**Solución aplicada**: la consulta a Overpass ya no se hace desde el
+navegador del usuario. Se hace UNA VEZ desde una GitHub Action con red
+fiable (`scripts/fetch-overpass-streets.mjs`, workflow
+`.github/workflows/update-street-geometry.yml`), y el resultado se guarda
+como fichero estático (`data/streets-geometry.json`) que la app carga como
+cualquier otro asset (`js/street-geometry.js`). Esto es ahora la fuente
+PRINCIPAL de geometría; el escaneo en vivo de teselas se mantiene como red
+de seguridad para calles que OSM tenga pero que aún no se hayan
+resincronizado.
+
+De paso se corrigió que `EXCLUDED_CLASSES`/el filtro de tipos de vía excluía
+`pedestrian`, lo que dejaba fuera calles peatonales reales con nombre del
+casco histórico (p. ej. tipo Calle Cruz Conde).
+
+**Sigue pendiente** (no resuelto en esta sesión, ver checklist más abajo):
+normalizar nombres de forma más agresiva antes de agrupar tramos (acentos,
+"Avda." vs "Avenida", mayúsculas) para los pocos casos en que el mismo
+nombre real llega escrito de dos formas distintas desde OSM.
+
 ## Fuentes verificadas
 
 ### 1. Ayuntamiento de Córdoba — CKAN "Callejero de Córdoba"
@@ -87,13 +117,22 @@ vez que se retome este trabajo.
 
 ## Qué falta para cumplir el objetivo completo de la fase
 
+- [x] Dejar de depender del escaneo de teselas en vivo como única fuente de
+      geometría → resuelto con `fetch-overpass-streets.mjs` +
+      `update-street-geometry.yml` + `street-geometry.js` (ver arriba).
 - [ ] Ejecutar `scripts/sync-official-streets.mjs` con el CSV completo →
       añade `codigoCalle` a las 2.324 vías.
 - [ ] Revisar manualmente los nombres del CSV oficial sin coincidencia en
       `official-streets.js` (el script los lista) — pueden ser calles
       nuevas que faltan en el listado actual.
 - [ ] Decidir e implementar la descarga filtrada del WFS de CDAU para
-      Córdoba (probablemente vía un script aparte, similar al de sync).
+      Córdoba (probablemente vía un script aparte, similar al de
+      `fetch-overpass-streets.mjs`), como fuente de geometría alternativa/
+      complementaria a Overpass — es la única con topología oficial real
+      por calle, no solo por tramo OSM.
 - [ ] Conectar `CallejeroRegistry` con el quiz para que las calles
       `OFICIAL_SIN_REPRESENTACION_OSM` puedan aparecer como pregunta (con
       su estado visible), en vez de ser invisibles como hasta ahora.
+- [ ] Normalizar nombres antes de agrupar tramos por calle (ver nota de
+      arriba) para los casos en que OSM tenga la misma calle escrita de dos
+      formas.
