@@ -53,11 +53,18 @@ const OUT_PATH = args.out
   ? path.resolve(process.cwd(), args.out)
   : path.join(__dirname, "..", "data", "streets-geometry.json");
 
-// Varios espejos de Overpass, por si uno está saturado o caído.
+// Varios espejos de Overpass, por si uno está saturado o caído. Orden por
+// fiabilidad actual (ver https://wiki.openstreetmap.org/wiki/Overpass_API,
+// tabla "Public Overpass API instances"): overpass-api.de, la instancia
+// principal, está marcada ahí mismo como sobrecargada y con fiabilidad no
+// garantizada actualmente ("nowadays this server is overloaded... do not
+// expect high reliability. Use alternatives if possible"), así que se deja
+// como última opción. El antiguo espejo overpass.kumi.systems ya no existe
+// (pasó a llamarse private.coffee).
 const OVERPASS_ENDPOINTS = [
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://lz4.overpass-api.de/api/interpreter",
 ];
 
 // Tipos de "highway" que cuentan como calle real para el callejero. Se
