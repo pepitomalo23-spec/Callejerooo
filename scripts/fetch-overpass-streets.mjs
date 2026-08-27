@@ -83,10 +83,19 @@ const OVERPASS_QUERY = `
 area["ISO3166-1"="ES"]["admin_level"="2"]->.spain;
 area["name"="Córdoba"]["admin_level"="8"]["boundary"="administrative"](area.spain)->.searchArea;
 (
-  way["highway"~"^(${INCLUDED_HIGHWAY_TYPES.join("|")})$"]["name"](area.searchArea);
+  way["highway"~"^(${INCLUDED_HIGHWAY_TYPES.join("|")})$"]["name"](area.searchArea)(37.60,-5.10,38.20,-4.45);
 );
 out geom;
 `.trim();
+// La segunda pareja de filtros (bbox tras el filtro de área) es una red de
+// seguridad extra: en la primera ejecución real, el espejo maps.mail.ru
+// devolvió mezcladas calles de Córdoba (Argentina) junto a las de Córdoba
+// (España) — el filtro por área a solas no bastó (probablemente por datos
+// desactualizados/incompletos de límites administrativos en ese espejo
+// concreto). El bbox aproximado del término municipal de Córdoba, España
+// (lat 37.60–38.20, lon -5.10–-4.45, con margen de sobra sobre los 1245 km²
+// reales del municipio) descarta cualquier resultado fuera de esa zona sin
+// depender de que el área administrativa esté bien resuelta.
 
 async function fetchFromOverpass() {
   const body = "data=" + encodeURIComponent(OVERPASS_QUERY);
@@ -118,9 +127,23 @@ async function fetchFromOverpass() {
   throw new Error(`Todos los espejos de Overpass fallaron. Último error: ${lastError && lastError.message}`);
 }
 
+// Bbox de seguridad (mismo usado en la consulta, repetido aquí como
+// segunda red de seguridad por si algún espejo ignorase el filtro de bbox
+// de la propia consulta): [minLat, minLon, maxLat, maxLon].
+const SAFETY_BBOX = { minLat: 37.60, minLon: -5.10, maxLat: 38.20, maxLon: -4.45 };
+
+function isWithinSafetyBbox(coords) {
+  return coords.every(
+    ([lon, lat]) =>
+      lat >= SAFETY_BBOX.minLat && lat <= SAFETY_BBOX.maxLat &&
+      lon >= SAFETY_BBOX.minLon && lon <= SAFETY_BBOX.maxLon
+  );
+}
+
 function groupByName(overpassJson) {
   const byName = new Map();
   let skippedNoGeometry = 0;
+  let skippedOutsideBbox = 0;
 
   for (const el of overpassJson.elements) {
     if (el.type !== "way") continue;
@@ -131,12 +154,19 @@ function groupByName(overpassJson) {
       continue;
     }
     const coords = el.geometry.map((pt) => [pt.lon, pt.lat]);
+    if (!isWithinSafetyBbox(coords)) {
+      skippedOutsideBbox++;
+      continue;
+    }
     if (!byName.has(name)) byName.set(name, []);
     byName.get(name).push(coords);
   }
 
   if (skippedNoGeometry > 0) {
     console.warn(`[fetch-overpass-streets] ${skippedNoGeometry} vías sin geometría descartadas.`);
+  }
+  if (skippedOutsideBbox > 0) {
+    console.warn(`[fetch-overpass-streets] ${skippedOutsideBbox} vías descartadas por caer fuera del bbox de seguridad (probable error de área en el espejo usado, p. ej. Córdoba de otro país).`);
   }
 
   return byName;
