@@ -82,18 +82,20 @@ out geom;
 `.trim();
 
 async function fetchFromOverpass() {
+  const body = "data=" + encodeURIComponent(OVERPASS_QUERY);
   let lastError = null;
   for (const endpoint of OVERPASS_ENDPOINTS) {
     console.log(`[fetch-overpass-streets] Probando ${endpoint} ...`);
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-        body: OVERPASS_QUERY,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
         signal: AbortSignal.timeout(200000),
       });
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${res.statusText}${text ? " — " + text.slice(0, 300) : ""}`);
       }
       const json = await res.json();
       if (!json.elements) {
