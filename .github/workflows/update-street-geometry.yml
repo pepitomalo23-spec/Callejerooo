@@ -34,16 +34,22 @@ jobs:
           node-version: "20"
 
       - name: Descargar geometría completa de Overpass
-        run: node scripts/fetch-overpass-streets.mjs
+        run: node scripts/fetch-overpass-streets.mjs 2>&1 | tee /tmp/fetch-overpass.log
+        continue-on-error: true
+
+      - name: Guardar log de depuración (siempre, incluso si falló)
+        if: always()
+        run: cp /tmp/fetch-overpass.log data/fetch-overpass-log.txt
 
       - name: Comitear si hay cambios
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- data/streets-geometry.json; then
-            echo "Sin cambios en la geometría, no se comitea nada."
+          git add data/streets-geometry.json data/fetch-overpass-log.txt
+          if git diff --cached --quiet; then
+            echo "Sin cambios, no se comitea nada."
           else
-            git add data/streets-geometry.json
             git commit -m "Actualizar geometría de calles desde Overpass [automático]"
             git push
           fi
