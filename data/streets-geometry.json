@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-27T06:56:03.433Z",
+  "generatedAt": "2026-08-27T07:03:35.329Z",
   "source": "overpass",
   "query": "[out:json][timeout:180];\narea[\"ISO3166-1\"=\"ES\"][\"admin_level\"=\"2\"]->.spain;\narea[\"name\"=\"Córdoba\"][\"admin_level\"=\"8\"][\"boundary\"=\"administrative\"](area.spain)->.searchArea;\n(\n  way[\"highway\"~\"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$\"][\"name\"](area.searchArea)(37.60,-5.10,38.20,-4.45);\n);\nout geom;",
   "totalStreets": 2729,
