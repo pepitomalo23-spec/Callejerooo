@@ -276,6 +276,7 @@
   // vista actual al conjunto de preguntas, sin reiniciar el progreso.
   function refresh(map) {
     const found = scanLoadedStreets(map);
+    if (window.applyStreetOverrides) window.applyStreetOverrides(found);
 
     if (!quizStarted) {
       if (found.size === 0) {

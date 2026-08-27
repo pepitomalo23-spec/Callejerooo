@@ -9,7 +9,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
-<link rel="stylesheet" href="css/style.css?v=7" />
+<link rel="stylesheet" href="css/style.css?v=8" />
 </head>
 <body>
 
@@ -77,7 +77,46 @@
       </div>
     </div>
 
-    <!-- Identificar / corregir un tramo mal etiquetado -->
+    <!-- Editor de geometría precisa (dibujar/ajustar el trazado real) -->
+    <div class="editor-section">
+      <button id="editor-toggle-btn" class="btn btn-secondary" type="button" aria-pressed="false">
+        Editar geometría de una calle
+      </button>
+
+      <div id="editor-panel" class="editor-panel" hidden>
+        <label class="editor-label" for="editor-street-select">Calle</label>
+        <select id="editor-street-select" class="editor-select"></select>
+
+        <div id="editor-name-row" class="editor-name-row" hidden>
+          <label class="editor-label" for="editor-name-input">Nombre de la calle nueva</label>
+          <input id="editor-name-input" class="editor-input" type="text" placeholder="Avenida Llanos del Pretorio" />
+        </div>
+
+        <p class="editor-hint">
+          Haz clic en el mapa para añadir puntos al final del trazado (línea amarilla discontinua).
+          Arrastra cualquier punto para ajustarlo con precisión.
+        </p>
+
+        <div class="editor-actions">
+          <button id="editor-undo-btn" class="btn btn-secondary" type="button">Deshacer último punto</button>
+          <button id="editor-clear-btn" class="btn btn-secondary" type="button">Vaciar trazado</button>
+        </div>
+
+        <label class="editor-checkbox">
+          <input type="checkbox" id="editor-mode-add" />
+          Añadir como tramo adicional (en vez de sustituir todo el trazado existente)
+        </label>
+
+        <div class="editor-actions">
+          <button id="editor-apply-btn" class="btn btn-primary" type="button">Aplicar ahora (previsualizar)</button>
+          <button id="editor-copy-btn" class="btn btn-secondary" type="button">Copiar código para el repositorio</button>
+        </div>
+
+        <p id="editor-status" class="editor-status"></p>
+      </div>
+    </div>
+
+    <!-- Identificar / corregir el nombre de un tramo mal etiquetado -->
     <div class="debug-section">
       <button id="debug-toggle-btn" class="btn btn-secondary" type="button" aria-pressed="false">
         Identificar calle (clic en el mapa)
@@ -106,8 +145,10 @@
   <script src="js/config.js?v=5"></script>
   <script src="js/map.js?v=5"></script>
   <script src="js/street-corrections.js?v=1"></script>
-  <script src="js/streets.js?v=6"></script>
+  <script src="js/street-overrides.js?v=1"></script>
+  <script src="js/streets.js?v=7"></script>
   <script src="js/street-debug.js?v=1"></script>
+  <script src="js/street-editor.js?v=1"></script>
   <script src="js/official-streets.js?v=1"></script>
   <script src="js/compare.js?v=1"></script>
   <script src="js/compare-ui.js?v=1"></script>
