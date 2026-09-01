@@ -1,7 +1,26 @@
 [fetch-overpass-streets] Probando https://overpass.private.coffee/api/interpreter ...
 [fetch-overpass-streets] Falló https://overpass.private.coffee/api/interpreter: HTTP 500 Internal Server Error — Internal Server Error
 [fetch-overpass-streets] Probando https://maps.mail.ru/osm/tools/overpass/api/interpreter ...
-[fetch-overpass-streets] OK: 6431 vías recibidas de https://maps.mail.ru/osm/tools/overpass/api/interpreter
-[fetch-overpass-streets] 1 vías descartadas por caer fuera del bbox de seguridad (probable error de área en el espejo usado, p. ej. Córdoba de otro país).
-[fetch-overpass-streets] Escrito /home/runner/work/Callejerooo/Callejerooo/data/streets-geometry.json
-[fetch-overpass-streets] 2729 calles, 6430 tramos en total.
+[fetch-overpass-streets] Falló https://maps.mail.ru/osm/tools/overpass/api/interpreter: HTTP 504 Gateway Timeout — <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" lan
+[fetch-overpass-streets] Probando https://overpass-api.de/api/interpreter ...
+[fetch-overpass-streets] Falló https://overpass-api.de/api/interpreter: HTTP 406 Not Acceptable — <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>406 Not Acceptable</title>
+</head><body>
+<h1>Not Acceptable</h1>
+<p>An appropriate representation of the requested resource could not be found on this server.</p>
+<hr>
+<address>Apache/2.4.6
+[fetch-overpass-streets] ERROR: Todos los espejos de Overpass fallaron. Último error: HTTP 406 Not Acceptable — <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>406 Not Acceptable</title>
+</head><body>
+<h1>Not Acceptable</h1>
+<p>An appropriate representation of the requested resource could not be found on this server.</p>
+<hr>
+<address>Apache/2.4.6
